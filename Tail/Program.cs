@@ -11,8 +11,8 @@ namespace Tail
     {
         public static async Task Main(string[] args)
         {
-            const int NumberOfProducers = 100;
-            const int NumberOfConsumers = 1;
+            const int NumberOfProducers = 200;
+            const int NumberOfConsumers = 10;
 
             var container = new SqlServerContainer();
             try
@@ -41,18 +41,18 @@ namespace Tail
                         .Range(0, NumberOfConsumers)
                         .Select(id => new Consumer(id, store, scheduler))
                         .ToArray();
-                    Console.WriteLine("Starting producers ...");
+                    Console.WriteLine("Starting {0} producers ...", NumberOfProducers);
                     Array.ForEach(producers, producer => producer.Start());
                     Console.WriteLine("Started.");
-                    Console.WriteLine("Starting consumers ...");
+                    Console.WriteLine("Starting {0} consumers ...", NumberOfConsumers);
                     Array.ForEach(consumers, consumer => consumer.Start());
                     Console.WriteLine("Started.");
                     Console.WriteLine("Press enter to exit");
                     Console.ReadLine();
-                    Console.WriteLine("Stopping producers ...");
+                    Console.WriteLine("Stopping {0} producers ...", NumberOfProducers);
                     Array.ForEach(producers, producer => producer.Stop());
                     Console.WriteLine("Stopped.");
-                    Console.WriteLine("Stopping consumers ...");
+                    Console.WriteLine("Stopping {0} consumers ...", NumberOfConsumers);
                     Array.ForEach(consumers, consumer => consumer.Stop());
                     Console.WriteLine("Stopped.");
                 }

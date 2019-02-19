@@ -9,7 +9,7 @@ namespace Tail
 {
     public class Scheduler : IScheduler, IDisposable
     {
-        private const int TimerFrequency = 100;
+        private const int TimerFrequency = 25;
 
         private IClock Clock { get; }
         private BufferBlock<object> Mailbox { get; }

@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using SqlStreamStore;
+using SqlStreamStore.Subscriptions;
 
 namespace Tail
 {
@@ -39,12 +40,13 @@ namespace Tail
                     switch(message)
                     {
                         case SubscribeToAll subscribe:
-                            position = null;
-                            if(subscription != null) { subscription.Dispose(); }
+                            Console.WriteLine("[{0}]SubscribeToAll", Id);
+                            position = subscribe.ContinueAfter;
+                            if (subscription != null) { subscription.Dispose(); }
                             subscription = Store.SubscribeToAll(
                                 null,
                                 (_, received, token) => {
-                                    if(position > received.Position)
+                                    if(position.HasValue && position.Value > received.Position)
                                     {
                                         Console.WriteLine("[{0}]Observed {1} after {2}", Id, received.Position, position);
                                     }
@@ -52,9 +54,19 @@ namespace Tail
                                     return Task.CompletedTask;
                                 },
                                 (_, reason, exception) => {
-                                    Console.WriteLine("[{0}]Subscription dropped because {1}:{2}", Id, reason, exception);
+                                    if (MessagePumpCancellation.IsCancellationRequested) return;
+
+                                    if (exception == null)
+                                    {
+                                        Console.WriteLine("[{0}]Subscription dropped because {1}", Id, reason);
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("[{0}]Subscription dropped because {1}:{2}", Id, reason, exception);
+                                    }
+                                    
                                     Scheduler.ScheduleTellOnce(
-                                        () => Mailbox.Post(new SubscribeToAll { ContinueAfter = null }),
+                                        () => Mailbox.Post(new SubscribeToAll { ContinueAfter = position }),
                                         TimeSpan.FromMilliseconds(random.Next(100, 5000)) // consume resubscribes in between 100 and 5000ms
                                     );
                                 }

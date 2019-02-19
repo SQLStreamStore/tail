@@ -41,6 +41,7 @@ namespace Tail
                     switch(message)
                     {
                         case AppendToStream append:
+                            //Console.WriteLine("[{0}]AppendToStream", Id);
                             var messages = Enumerable
                                     .Range(0, random.Next(1, 100)) // produce between 1 and 99 messages per append
                                     .Select(index => new NewStreamMessage(Guid.NewGuid(), append.Stream, text.Sentences(random.Next(5, 10)))) //randomize the data a bit

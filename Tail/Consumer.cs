@@ -44,7 +44,7 @@ namespace Tail
                             position = subscribe.ContinueAfter;
                             if (subscription != null) { subscription.Dispose(); }
                             subscription = Store.SubscribeToAll(
-                                null,
+                                subscribe.ContinueAfter,
                                 (_, received, token) => {
                                     if(position.HasValue && position.Value > received.Position)
                                     {

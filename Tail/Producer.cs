@@ -11,6 +11,7 @@ namespace Tail
 {
     public class Producer
     {
+        private readonly int Id;
         private readonly IStreamStore Store;
         private readonly IScheduler Scheduler;
         private readonly BufferBlock<object> Mailbox;
@@ -60,8 +61,6 @@ namespace Tail
                 }
             }, MessagePumpCancellation.Token);
         }
-
-        public int Id { get; }
 
         public void Start() => Mailbox.Post(new AppendToStream { Stream = "producer-" + Id, ExpectedVersion = ExpectedVersion.NoStream });
         public void Stop() => MessagePumpCancellation.Cancel();

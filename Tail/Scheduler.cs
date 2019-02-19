@@ -9,7 +9,7 @@ namespace Tail
 {
     public class Scheduler : IScheduler, IDisposable
     {
-        private const int TimerFrequency = 500;
+        private const int TimerFrequency = 100;
 
         private IClock Clock { get; }
         private BufferBlock<object> Mailbox { get; }
@@ -57,9 +57,13 @@ namespace Tail
         private class Messages
         {
             public class ScheduleTellOnce { public Action Action { get; set; } public Instant Due { get; set; } }
-            public class ScheduleTellOnce2 { public Func<CancellationToken, Task> Action { get; set; } public Instant Due { get; set; } }
 
             public class TimerElapsed { public Instant Time { get; set; } }
+        }
+        
+        public void ScheduleTellOnce(Action action, TimeSpan due)
+        {
+            Mailbox.Post(new Messages.ScheduleTellOnce { Action = action, Due = Clock.GetCurrentInstant().Plus(Duration.FromTimeSpan(due)) });
         }
 
         public Task ScheduleTellOnceAsync(Action action, TimeSpan due, CancellationToken token = default)

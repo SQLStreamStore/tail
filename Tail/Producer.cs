@@ -24,42 +24,60 @@ namespace Tail
             Store = store ?? throw new ArgumentNullException(nameof(store));
             Scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
             MessagePumpCancellation = new CancellationTokenSource();
-            Mailbox = new BufferBlock<object>(new DataflowBlockOptions 
-            { 
+            Mailbox = new BufferBlock<object>(new DataflowBlockOptions
+            {
                 EnsureOrdered = true,
                 BoundedCapacity = int.MaxValue,
                 MaxMessagesPerTask = 1,
                 CancellationToken = MessagePumpCancellation.Token
             });
-            MessagePump = Task.Run(async() =>
+            MessagePump = Task.Run(async () =>
             {
-                var text = new Lorem();
-                var random = new Random();
-                while(!MessagePumpCancellation.Token.IsCancellationRequested)
+                try
                 {
-                    var message = await Mailbox.ReceiveAsync(MessagePumpCancellation.Token);
-                    switch(message)
+                    var text = new Lorem();
+                    var random = new Random();
+                    while (!MessagePumpCancellation.Token.IsCancellationRequested)
                     {
-                        case AppendToStream append:
-                            //Console.WriteLine("[{0}]AppendToStream", Id);
-                            var messages = Enumerable
-                                    .Range(0, random.Next(1, 100)) // produce between 1 and 99 messages per append
-                                    .Select(index => new NewStreamMessage(Guid.NewGuid(), append.Stream, text.Sentences(random.Next(5, 10)))) //randomize the data a bit
-                                    .ToArray();
+                        var message = await Mailbox.ReceiveAsync(MessagePumpCancellation.Token);
+                        switch (message)
+                        {
+                            case AppendToStream append:
+                                try
+                                {
+                                    var messages = Enumerable
+                                            .Range(0, random.Next(1, 100)) // produce between 1 and 99 messages per append
+                                            .Select(index => new NewStreamMessage(Guid.NewGuid(), append.Stream, text.Sentences(random.Next(5, 10)))) //randomize the data a bit
+                                            .ToArray();
 
-                            var result = await Store.AppendToStream(
-                                append.Stream, append.ExpectedVersion,
-                                messages,
-                                MessagePumpCancellation.Token);
+                                    var result = await Store.AppendToStream(
+                                        append.Stream, append.ExpectedVersion,
+                                        messages,
+                                        MessagePumpCancellation.Token);
 
-                            await scheduler.ScheduleTellOnceAsync(
-                                () => Mailbox.Post(new AppendToStream { Stream = append.Stream, ExpectedVersion = result.CurrentVersion }),
-                                TimeSpan.FromMilliseconds(random.Next(100, 5000)), // produce another append on the same stream in about 100 to 5000ms
-                                MessagePumpCancellation.Token
-                            );
-                            break;
+                                    await scheduler.ScheduleTellOnceAsync(
+                                        () => Mailbox.Post(new AppendToStream { Stream = append.Stream, ExpectedVersion = result.CurrentVersion }),
+                                        TimeSpan.FromMilliseconds(random.Next(100, 5000)), // produce another append on the same stream in about 100 to 5000ms
+                                        MessagePumpCancellation.Token
+                                    );
+                                }
+                                catch (Exception exception)
+                                {
+                                    if (!MessagePumpCancellation.IsCancellationRequested)
+                                    {
+                                        Console.WriteLine("[{0}]AppendToStream failed because {1}", Id, exception);
+                                        await scheduler.ScheduleTellOnceAsync(
+                                            () => Mailbox.Post(new AppendToStream { Stream = append.Stream, ExpectedVersion = append.ExpectedVersion }),
+                                            TimeSpan.FromMilliseconds(random.Next(100, 5000)), // produce another append on the same stream in about 100 to 5000ms
+                                            MessagePumpCancellation.Token
+                                        );
+                                    }
+                                }
+                                break;
+                        }
                     }
                 }
+                catch (OperationCanceledException) { }
             }, MessagePumpCancellation.Token);
         }
 

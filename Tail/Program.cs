@@ -30,31 +30,37 @@ namespace Tail
                     Console.WriteLine("Creating sql stream store schema ...");
                     await store.CreateSchema();
                     Console.WriteLine("Created.");
+                    using(var scheduler = new Scheduler(SystemClock.Instance))
+                    {
+                        var producers = Enumerable
+                            .Range(1, NumberOfProducers)
+                            .Select(id => new Producer(id, store, scheduler))
+                            .ToArray();
+                        
+                        var consumers = Enumerable
+                            .Range(1, NumberOfConsumers)
+                            .Select(id => new Consumer(id, store, scheduler))
+                            .ToArray();
+                        
+                        Console.WriteLine("Starting {0} producers ...", NumberOfProducers);
+                        Array.ForEach(producers, producer => producer.Start());
+                        Console.WriteLine("Started.");
+                        
+                        Console.WriteLine("Starting {0} consumers ...", NumberOfConsumers);
+                        Array.ForEach(consumers, consumer => consumer.Start());
+                        Console.WriteLine("Started.");
+                        
+                        Console.WriteLine("Press enter to exit");
+                        Console.ReadLine();
+                        
+                        Console.WriteLine("Stopping {0} producers ...", NumberOfProducers);
+                        Array.ForEach(producers, producer => producer.Stop());
+                        Console.WriteLine("Stopped.");
 
-                    var clock = SystemClock.Instance;
-                    var scheduler = new Scheduler(clock);
-                    var producers = Enumerable
-                        .Range(0, NumberOfProducers)
-                        .Select(id => new Producer(id, store, scheduler))
-                        .ToArray();
-                    var consumers = Enumerable
-                        .Range(0, NumberOfConsumers)
-                        .Select(id => new Consumer(id, store, scheduler))
-                        .ToArray();
-                    Console.WriteLine("Starting {0} producers ...", NumberOfProducers);
-                    Array.ForEach(producers, producer => producer.Start());
-                    Console.WriteLine("Started.");
-                    Console.WriteLine("Starting {0} consumers ...", NumberOfConsumers);
-                    Array.ForEach(consumers, consumer => consumer.Start());
-                    Console.WriteLine("Started.");
-                    Console.WriteLine("Press enter to exit");
-                    Console.ReadLine();
-                    Console.WriteLine("Stopping {0} producers ...", NumberOfProducers);
-                    Array.ForEach(producers, producer => producer.Stop());
-                    Console.WriteLine("Stopped.");
-                    Console.WriteLine("Stopping {0} consumers ...", NumberOfConsumers);
-                    Array.ForEach(consumers, consumer => consumer.Stop());
-                    Console.WriteLine("Stopped.");
+                        Console.WriteLine("Stopping {0} consumers ...", NumberOfConsumers);
+                        Array.ForEach(consumers, consumer => consumer.Stop());
+                        Console.WriteLine("Stopped.");
+                    }
                 }
             }
             finally

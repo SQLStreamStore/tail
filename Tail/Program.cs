@@ -21,9 +21,9 @@ namespace Tail
             try
             {
                 Console.WriteLine("Creating sql server container ...");
-                await container.InitializeAsync();
+                await container.InitializeAsync().ConfigureAwait(false);
                 Console.WriteLine("Created.");
-                var db = await container.CreateDatabaseAsync(UseSnapshotIsolation);
+                var db = await container.CreateDatabaseAsync(UseSnapshotIsolation).ConfigureAwait(false);
                 Console.WriteLine("ConnectionString={0}", db.ConnectionString);
                 using (var store = new MsSqlStreamStore(new MsSqlStreamStoreSettings(db.ConnectionString)
                 {
@@ -31,7 +31,7 @@ namespace Tail
                 }))
                 {
                     Console.WriteLine("Creating sql stream store schema ...");
-                    await store.CreateSchema();
+                    await store.CreateSchema().ConfigureAwait(false);
                     Console.WriteLine("Created.");
                     using(var scheduler = new Scheduler(SystemClock.Instance))
                     {
@@ -69,7 +69,7 @@ namespace Tail
             finally
             {
                 Console.WriteLine("Removing sql server container ...");
-                await container.DisposeAsync();
+                await container.DisposeAsync().ConfigureAwait(false);
                 Console.WriteLine("Removed.");
             }
         }

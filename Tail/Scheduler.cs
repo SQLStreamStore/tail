@@ -43,7 +43,7 @@ namespace Tail
             {
                 while(!MessagePumpCancellation.IsCancellationRequested)
                 {
-                    var message = await Mailbox.ReceiveAsync(MessagePumpCancellation.Token);
+                    var message = await Mailbox.ReceiveAsync(MessagePumpCancellation.Token).ConfigureAwait(false);
                     switch (message)
                     {
                         case Messages.ScheduleTellOnce msg:

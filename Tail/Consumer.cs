@@ -37,7 +37,7 @@ namespace Tail
                     IAllStreamSubscription subscription = null;
                     while (!MessagePumpCancellation.Token.IsCancellationRequested)
                     {
-                        var message = await Mailbox.ReceiveAsync(MessagePumpCancellation.Token);
+                        var message = await Mailbox.ReceiveAsync(MessagePumpCancellation.Token).ConfigureAwait(false);
                         switch (message)
                         {
                             case SubscribeToAll subscribe:
@@ -46,8 +46,13 @@ namespace Tail
                                 if (subscription != null) { subscription.Dispose(); }
                                 subscription = Store.SubscribeToAll(
                                     subscribe.ContinueAfter,
-                                    (_, received, token) =>
-                                        Mailbox.SendAsync(new MessageReceived { Position = received.Position }),
+                                    async (_, received, token) =>
+                                    {
+                                        var completion = new TaskCompletionSource<bool>();
+                                        await Mailbox.SendAsync(new MessageReceived { Position = received.Position, Completion = completion }, MessagePumpCancellation.Token).ConfigureAwait(false);
+                                        await completion.Task.ConfigureAwait(false);
+                                    },
+                                        
                                     (_, reason, exception) =>
                                         Mailbox.SendAsync(new SubscriptionDropped { Reason = reason, Exception = exception })
                                 );
@@ -58,6 +63,7 @@ namespace Tail
                                     Console.WriteLine("Received message at position {0} after message at position {1}.", received.Position, position.Value);
                                 }
                                 position = received.Position;
+                                received.Completion.TrySetResult(true); //signal that the next message can be pushed into the mailbox
                                 break;
                             case SubscriptionDropped dropped:
                                 if (!MessagePumpCancellation.IsCancellationRequested)
@@ -70,10 +76,12 @@ namespace Tail
                                     {
                                         Console.WriteLine("[{0}]Subscription dropped because {1}:{2}", Id, dropped.Reason, dropped.Exception);
                                     }
-                                    Scheduler.ScheduleTellOnce(
-                                        () => Mailbox.Post(new SubscribeToAll { ContinueAfter = position }),
-                                        TimeSpan.FromMilliseconds(random.Next(100, 5000)) // consume resubscribes in between 100 and 5000ms
-                                    );
+                                    await Scheduler
+                                        .ScheduleTellOnceAsync(
+                                            () => Mailbox.Post(new SubscribeToAll { ContinueAfter = position }),
+                                            TimeSpan.FromMilliseconds(random.Next(100, 5000)), // consume resubscribes in between 100 and 5000ms
+                                            MessagePumpCancellation.Token)
+                                        .ConfigureAwait(false);
                                     position = null;
                                 }
                                 break;
@@ -90,7 +98,7 @@ namespace Tail
 
         private class SubscribeToAll { public long? ContinueAfter { get; set; } }
 
-        private class MessageReceived { public long Position { get; set; } }
+        private class MessageReceived { public long Position { get; set; } public TaskCompletionSource<bool> Completion { get; set; } }
 
         private class SubscriptionDropped { public SubscriptionDroppedReason Reason { get; set; } public Exception Exception { get; set; } }
     }

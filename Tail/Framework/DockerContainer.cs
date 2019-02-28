@@ -102,7 +102,8 @@ namespace Tail
                                     HostPort = binding.HostPort.ToString(CultureInfo.InvariantCulture)
                                 }
                             })
-                    }
+                    },
+                    Volumes = Configuration.Container.Volumes.ToDictionary(key => key, value => default(EmptyStruct))
                 })
                 .ConfigureAwait(false);
 
@@ -166,7 +167,7 @@ namespace Tail
         {
             var images = await _client
                 .Images
-                .ListImagesAsync(new ImagesListParameters { MatchName = Configuration.Image.RegistryQualifiedName })
+                .ListImagesAsync(new ImagesListParameters { MatchName = Configuration.Image.FullyQualifiedName })
                 .ConfigureAwait(false);
             return images.Count != 0;
         }

@@ -8,6 +8,8 @@ namespace Tail
 
         public string[] EnvironmentVariables { get; set; } = new string[0];
 
+        public string[] Volumes { get; set; } = new string[0];
+
         public bool StopContainer { get; set; } = true;
 
         public bool RemoveContainer { get; set; } = true;

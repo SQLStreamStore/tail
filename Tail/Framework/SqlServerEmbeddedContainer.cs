@@ -60,7 +60,8 @@ ALTER DATABASE [{database}] SET READ_COMMITTED_SNAPSHOT ON"
                 Image = new ImageSettings
                 {
                     Registry = "mcr.microsoft.com",
-                    Name = "mssql/server"
+                    Name = "mssql/server",
+                    Tag = "2017-latest"
                 };
 
                 Container = new ContainerSettings
@@ -77,7 +78,12 @@ ALTER DATABASE [{database}] SET READ_COMMITTED_SNAPSHOT ON"
                     EnvironmentVariables = new[]
                     {
                         "ACCEPT_EULA=Y",
-                        $"SA_PASSWORD={Password}"
+                        $"SA_PASSWORD={Password}",
+                        "MSSQL_PID=Standard"
+                    },
+                    Volumes = new[] 
+                    { 
+                        Environment.CurrentDirectory + ":/var/opt/mssql" 
                     }
                 };
 

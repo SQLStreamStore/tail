@@ -14,7 +14,7 @@ namespace Tail
             // Configuration section
             const int NumberOfProducers = 200;
             const int NumberOfConsumers = 10;
-            const ProducerAppendBehavior Behavior = ProducerAppendBehavior.Singular;
+            const ProducerAppendBehavior Behavior = ProducerAppendBehavior.Batched;
             const bool UseSnapshotIsolation = true;
 
             var container = new SqlServerContainer();
@@ -25,13 +25,13 @@ namespace Tail
                 Console.WriteLine("Created.");
                 var db = await container.CreateDatabaseAsync(UseSnapshotIsolation).ConfigureAwait(false);
                 Console.WriteLine("ConnectionString={0}", db.ConnectionString);
-                using (var store = new MsSqlStreamStore(new MsSqlStreamStoreSettings(db.ConnectionString)
+                using (var store = new MsSqlStreamStoreV3(new MsSqlStreamStoreV3Settings(db.ConnectionString)
                 {
                     Schema = "dbo"
                 }))
                 {
                     Console.WriteLine("Creating sql stream store schema ...");
-                    await store.CreateSchema().ConfigureAwait(false);
+                    await store.CreateSchemaIfNotExists().ConfigureAwait(false);
                     Console.WriteLine("Created.");
                     using(var scheduler = new Scheduler(SystemClock.Instance))
                     {

@@ -28,12 +28,17 @@ namespace Tail
         public Scheduler(IClock clock)
         {
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
-            Mailbox = new BufferBlock<object>();            
+            MessagePumpCancellation = new CancellationTokenSource();
+            Mailbox = new BufferBlock<object>(new DataflowBlockOptions
+            {
+                BoundedCapacity = int.MaxValue,
+                MaxMessagesPerTask = 1,
+                CancellationToken = MessagePumpCancellation.Token
+            });            
             Timer = new Timer(_ => 
             {
                 Mailbox.Post(new Messages.TimerElapsed { Time = clock.GetCurrentInstant() });
             }, null, 0, TimerFrequency);
-            MessagePumpCancellation = new CancellationTokenSource();
             MessagePump = Task.Run(async() =>
             {
                 while(!MessagePumpCancellation.IsCancellationRequested)

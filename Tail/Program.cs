@@ -11,8 +11,11 @@ namespace Tail
     {
         public static async Task Main(string[] args)
         {
+            // Configuration section
             const int NumberOfProducers = 200;
             const int NumberOfConsumers = 10;
+            const ProducerAppendBehavior Behavior = ProducerAppendBehavior.Singular;
+            const bool UseSnapshotIsolation = true;
 
             var container = new SqlServerContainer();
             try
@@ -20,7 +23,7 @@ namespace Tail
                 Console.WriteLine("Creating sql server container ...");
                 await container.InitializeAsync();
                 Console.WriteLine("Created.");
-                var db = await container.CreateDatabaseAsync();
+                var db = await container.CreateDatabaseAsync(UseSnapshotIsolation);
                 Console.WriteLine("ConnectionString={0}", db.ConnectionString);
                 using (var store = new MsSqlStreamStore(new MsSqlStreamStoreSettings(db.ConnectionString)
                 {
@@ -34,7 +37,7 @@ namespace Tail
                     {
                         var producers = Enumerable
                             .Range(1, NumberOfProducers)
-                            .Select(id => new Producer(id, store, scheduler))
+                            .Select(id => new Producer(id, Behavior, store, scheduler))
                             .ToArray();
                         
                         var consumers = Enumerable

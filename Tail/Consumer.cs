@@ -24,7 +24,6 @@ namespace Tail
             MessagePumpCancellation = new CancellationTokenSource();
             Mailbox = new BufferBlock<object>(new DataflowBlockOptions
             {
-                EnsureOrdered = true,
                 BoundedCapacity = int.MaxValue,
                 MaxMessagesPerTask = 1,
                 CancellationToken = MessagePumpCancellation.Token

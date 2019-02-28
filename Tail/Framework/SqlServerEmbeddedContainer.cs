@@ -32,13 +32,15 @@ namespace Tail
                 IntegratedSecurity = false
             };
 
-        public async Task<SqlConnectionStringBuilder> CreateDatabaseAsync()
+        public async Task<SqlConnectionStringBuilder> CreateDatabaseAsync(bool use_snapshot_isolation = true)
         {
             var database = $"DB{Interlocked.Increment(ref _db)}";
-            var text = $@"
+            var text = use_snapshot_isolation 
+                ? $@"
 CREATE DATABASE [{database}]
 ALTER DATABASE [{database}] SET ALLOW_SNAPSHOT_ISOLATION ON
-ALTER DATABASE [{database}] SET READ_COMMITTED_SNAPSHOT ON";
+ALTER DATABASE [{database}] SET READ_COMMITTED_SNAPSHOT ON" 
+                : $"CREATE DATABASE [{database}]";
             using (var connection = new SqlConnection(CreateMasterConnectionStringBuilder().ConnectionString))
             {
                 await connection.OpenAsync();
